@@ -14,7 +14,6 @@ import (
 
 	"github.com/FactomProject/factom"
 	"github.com/pegnet/pegnet/api"
-	"github.com/pegnet/pegnet/balances"
 	"github.com/pegnet/pegnet/common"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -79,23 +78,17 @@ var RootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx, cancel := context.WithCancel(context.Background())
 		common.GlobalExitHandler.AddCancel(cancel)
-		b := balances.NewBalanceTracker()
 
-		ValidateConfig(Config) // Will fatal log if it fails
+		ValidateStakingConfig(Config) // Will fatal log if it fails
 
 		// Services
 		monitor := LaunchFactomMonitor(Config)
-		grader := LaunchGrader(Config, monitor, b, ctx, true)
-		statTracker := LaunchStatistics(Config, ctx)
-		apiserver := LaunchAPI(Config, statTracker, grader, b, true)
-		LaunchControlPanel(Config, ctx, monitor, statTracker, b)
-		var _ = apiserver
 
 		// This is a blocking call
-		coord := LaunchMiners(Config, ctx, monitor, grader, statTracker)
+		coord_s := LaunchStaker(Config, ctx, monitor)
 
-		// Calling cancel() will cancel the stat tracker collection AND the miners
-		var _, _ = cancel, coord
+		// Calling cancel() will cancel the staker
+		var _, _ = cancel, coord_s
 	},
 }
 
